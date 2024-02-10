@@ -1,6 +1,11 @@
 const {Storage} = require('@google-cloud/storage');
 const { error } = require('console');
 const csv = require('csv-parser');
+const {BigQuery} = require('@google-cloud/bigquery');
+
+const bq = new BigQuery();
+const dataSetId = 'weather_etl_v5';
+const tableId = 'final_weatherTable';
 
 exports.readObservation = (file, context) => {
     // console.log(`  Event: ${context.eventId}`);
@@ -34,7 +39,7 @@ exports.readObservation = (file, context) => {
     })
 }
 
-// Function to modify the row data
+//Function to modify the row data
 function modifyDict(row, fileName) {
     for (let key in row) {
         let value = parseFloat(row[key]);
@@ -59,10 +64,31 @@ function modifyDict(row, fileName) {
 
 }
 
-// Function to print the row data
+//Function to print the row data
 function printDict(row) {
     for (let key in row) {
         console.log(`${key} : ${row[key]}`);
     }
+
+    writeToBQ(row);
 }
 
+
+//Function to write to big query
+async function writeToBQ(obj) {
+    let finalRows = [];
+    finalRows.push(obj);
+
+    await bq
+    .dataset(dataSetId)
+    .table(tableId)
+    .insert(finalRows)
+    .then( () => {
+        finalRows.forEach((row) => {
+            console.log(`Inserted ${row}!`)
+        })
+    })
+    .catch( (err) => {
+        console.log(`Error: ${err}`)
+    })
+}
